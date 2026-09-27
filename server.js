@@ -91,4 +91,4 @@ const server=http.createServer(async(req,res)=>{
   }catch(e){ console.error(e); if(!res.headersSent)send(res,500,{error:'Server error'}); }
 });
 server.on('error',e=>{ console.error('SERVER_ERROR',e.message); process.exit(1); });
-server.listen(PORT,'127.0.0.1',()=>console.log(`AP DSC Biology Student SaaS running at http://127.0.0.1:${PORT}`));
+server.listen(PORT,'0.0.0.0',()=>console.log(`AP DSC Biology Student SaaS running on port ${PORT}`));
