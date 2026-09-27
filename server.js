@@ -25,7 +25,19 @@ function send(res,status,data,headers={}){
 function parseAuth(req){
   const h=req.headers.authorization||'';
   const token=h.startsWith('Bearer ')?h.slice(7):'';
-  return sessions.get(token);
+  if(!token) return null;
+
+  const live = sessions.get(token);
+  if(live) return live;
+
+  // Render-safe fallback: recover authenticated user from db.json
+  const d = getDB();
+  const u = d.users.find(x => x.token === token);
+  if(!u) return null;
+
+  const user = {id:u.id,name:u.name,mobile:u.mobile};
+  sessions.set(token,user);
+  return user;
 }
 function requireAuth(req,res){
   const u=parseAuth(req);
@@ -69,17 +81,30 @@ const server=http.createServer(async(req,res)=>{
         if(name.length<2||mobile.length<6||password.length<4) return send(res,400,{error:'Enter valid name, mobile/student ID and password.'});
         const d=getDB(); if(d.users.some(u=>u.mobile===mobile)) return send(res,409,{error:'Student account already exists.'});
         const h=hashPassword(password); const u={id:crypto.randomUUID(),name,mobile,salt:h.salt,hash:h.hash,createdAt:new Date().toISOString()}; d.users.push(u); saveDB(d);
-        const token=crypto.randomBytes(32).toString('hex'); sessions.set(token,{id:u.id,name:u.name,mobile:u.mobile});
+        const token=crypto.randomBytes(32).toString('hex');
+        u.token=token;
+        saveDB(d);
+        sessions.set(token,{id:u.id,name:u.name,mobile:u.mobile});
         return send(res,200,{token,user:{id:u.id,name:u.name,mobile:u.mobile}});
       }
       if(req.method==='POST' && p==='/api/login'){
         const b=await readBody(req), d=getDB(); const mobile=String(b.mobile||'').trim(); const password=String(b.password||''); const u=d.users.find(x=>x.mobile===mobile);
         if(!u || crypto.scryptSync(password,u.salt,64).toString('hex')!==u.hash) return send(res,401,{error:'Invalid student ID/mobile or password.'});
-        const token=crypto.randomBytes(32).toString('hex'); sessions.set(token,{id:u.id,name:u.name,mobile:u.mobile});
+        const token=crypto.randomBytes(32).toString('hex');
+        u.token=token;
+        saveDB(d);
+        sessions.set(token,{id:u.id,name:u.name,mobile:u.mobile});
         return send(res,200,{token,user:{id:u.id,name:u.name,mobile:u.mobile}});
       }
       const user=requireAuth(req,res); if(!user)return;
-      if(req.method==='POST' && p==='/api/logout'){ const t=(req.headers.authorization||'').slice(7); sessions.delete(t); return send(res,200,{ok:true}); }
+      if(req.method==='POST' && p==='/api/logout'){
+        const t=(req.headers.authorization||'').slice(7);
+        sessions.delete(t);
+        const d=getDB();
+        const u=d.users.find(x=>x.token===t);
+        if(u){ delete u.token; saveDB(d); }
+        return send(res,200,{ok:true});
+      }
       if(req.method==='GET' && p==='/api/me'){ const d=getDB(); return send(res,200,{user,attempts:d.attempts.filter(x=>x.userId===user.id)}); }
       const m=p.match(/^\/api\/attempt\/(\d+)$/); if(m){ const day=Number(m[1]); if(day<7||day>20)return send(res,400,{error:'Invalid day'}); const d=getDB();
         if(req.method==='GET'){ return send(res,200,d.attempts.find(x=>x.userId===user.id&&x.day===day)||null); }
