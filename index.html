@@ -1,0 +1,35 @@
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>AP DSC Biology • Student Portal</title><link rel="stylesheet" href="styles.css"></head><body>
+<div id="auth" class="auth"><div class="auth-card"><div class="brand">AP DSC Biology</div><h1>Student Portal</h1><p>Daily Grand Test • Days 7–20</p><div class="tabs"><button id="loginTab" class="active">Login</button><button id="regTab">New Student</button></div><div id="loginBox"><input id="loginMobile" placeholder="Student ID / Mobile"><input id="loginPass" type="password" placeholder="Password"><button class="primary" id="loginBtn">Login</button></div><div id="regBox" class="hide"><input id="regName" placeholder="Student Name"><input id="regMobile" placeholder="Student ID / Mobile"><input id="regPass" type="password" placeholder="Create Password"><button class="primary" id="regBtn">Create Account</button></div><div id="authMsg"></div></div></div>
+<div id="portal" class="hide"><header><div><b>AP DSC Biology</b><small>Student Daily Grand Test</small></div><div class="student"><span id="studentName"></span><button id="logout">Logout</button></div></header><section id="dashboard"><div class="welcome"><div><small>Welcome back</small><h1 id="welcomeName"></h1><p>Select a day and start your Biology Grand Test.</p></div><div class="stat"><b>14</b><span>Days Available</span></div><div class="stat"><b>160</b><span>Questions / Day</span></div><div class="stat"><b>2:40</b><span>Exam Time</span></div></div><div class="day-grid" id="dayGrid"></div></section>
+<section id="exam" class="hide"><header class="examhead"><div><b>AP DSC Biology</b><small id="examDay"></small></div><div class="timer" id="timer">02:40:00</div></header><div class="stats"><div><b>160</b><small>Questions</small></div><div><b>80</b><small>Very Hard</small></div><div><b>80</b><small>NEET-style</small></div><div><b>100%</b><small>Biology</small></div></div><main><section class="paper"><div class="bar"><b id="qnum">Q1</b><span id="diff"></span><span id="progress"></span></div><article><small id="topic"></small><h2 id="q"></h2><p id="te"></p><div id="opts"></div></article><nav><button id="prev">Previous</button><button id="clear">Clear</button><button id="mark">☆ Review</button><button id="next">Next</button></nav></section><aside><h3>Question Palette</h3><div id="pal"></div><button id="submit">Submit Exam</button><button id="backDash" class="secondary">Dashboard</button></aside></main></section>
+<div id="modal" class="modal hide"><div class="result"><h1 id="resultTitle">Result</h1><div id="score"></div><div id="summary"></div><button id="showExp">View Explanations</button><button id="restart">Restart Day</button><button id="resultDash" class="secondary">Dashboard</button><div id="explanations" class="explanations"></div></div></div></div>
+<script src="data/day7.js"></script><script src="data/day8.js"></script><script src="data/day9.js"></script><script src="data/day10.js"></script><script src="data/day11.js"></script><script src="data/day12.js"></script><script src="data/day13.js"></script><script src="data/day14.js"></script><script src="data/day15.js"></script><script src="data/day16.js"></script><script src="data/day17.js"></script><script src="data/day18.js"></script><script src="data/day19.js"></script><script src="data/day20.js"></script><script src="app.js"></script>
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  const text = document.body.innerText || "";
+
+  if (text.includes("AP DSC Biology") && text.includes("Student Portal")) {
+    document.body.classList.add("login-modern");
+
+    const candidates = document.body.querySelectorAll(
+      "main, section, .container, .card, .login-card, .auth-card, form"
+    );
+
+    let card = null;
+
+    for (const el of candidates) {
+      const t = (el.innerText || "");
+      if (t.includes("Student Portal") || t.includes("Daily Grand Test")) {
+        card = el;
+        break;
+      }
+    }
+
+    if (card) {
+      card.classList.add("login-modern-card");
+    }
+  }
+});
+</script>
+
+</body></html>

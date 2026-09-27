@@ -1,0 +1,35 @@
+const DAYS={7:DAY7_QUESTIONS,8:DAY8_QUESTIONS,9:DAY9_QUESTIONS,10:DAY10_QUESTIONS,11:DAY11_QUESTIONS,12:DAY12_QUESTIONS,13:DAY13_QUESTIONS,14:DAY14_QUESTIONS,15:DAY15_QUESTIONS,16:DAY16_QUESTIONS,17:DAY17_QUESTIONS,18:DAY18_QUESTIONS,19:DAY19_QUESTIONS,20:DAY20_QUESTIONS};
+let token=sessionStorage.getItem('dscToken')||'',user=null,day=20,qs=[],i=0,A={},M={},sec=9600,submitted=false;
+const $=x=>document.getElementById(x);
+const api=async(url,opt={})=>{
+  opt.headers={
+    ...(opt.headers||{}),
+    'Content-Type':'application/json',
+    ...(token?{Authorization:'Bearer '+token}:{})
+  };
+
+  const r=await fetch(url,opt);
+  const j=await r.json().catch(()=>({}));
+
+  if(!r.ok) throw Error(j.error||'Request failed');
+  return j;
+};
+function showAuth(){ $('auth').classList.remove('hide');$('portal').classList.add('hide') } function showPortal(){ $('auth').classList.add('hide');$('portal').classList.remove('hide');$('exam').classList.add('hide');$('dashboard').classList.remove('hide');$('modal').classList.add('hide');renderDays() }
+$('loginTab').onclick=()=>{$('loginTab').classList.add('active');$('regTab').classList.remove('active');$('loginBox').classList.remove('hide');$('regBox').classList.add('hide');$('authMsg').textContent=''};
+$('regTab').onclick=()=>{$('regTab').classList.add('active');$('loginTab').classList.remove('active');$('regBox').classList.remove('hide');$('loginBox').classList.add('hide');$('authMsg').textContent=''};
+$('loginBtn').onclick=async()=>{try{const j=await api('/api/login',{method:'POST',body:JSON.stringify({mobile:$('loginMobile').value,password:$('loginPass').value})});token=j.token;sessionStorage.setItem('dscToken',token);user=j.user;showPortal()}catch(e){$('authMsg').textContent=e.message}};
+$('regBtn').onclick=async()=>{try{const j=await api('/api/register',{method:'POST',body:JSON.stringify({name:$('regName').value,mobile:$('regMobile').value,password:$('regPass').value})});token=j.token;sessionStorage.setItem('dscToken',token);user=j.user;showPortal()}catch(e){$('authMsg').textContent=e.message}};
+$('logout').onclick=async()=>{try{await api('/api/logout',{method:'POST'})}catch{}sessionStorage.removeItem('dscToken');token='';user=null;showAuth()};
+async function renderDays(){ $('studentName').textContent=user.name;$('welcomeName').textContent=user.name;const j=await api('/api/me');const attempts=new Map(j.attempts.map(a=>[a.day,a]));$('dayGrid').innerHTML=Array.from({length:14},(_,k)=>{let d=k+7,a=attempts.get(d),status=a?.status==='completed'?'Completed':a?'In Progress':'Not Attempted';let score=a?.result?.score!=null?`${a.result.score}/160`:'';return `<div class="day-card"><div><small>DAILY GRAND TEST</small><h2>Day ${d}</h2><p>160 MCQs • 2:40 Hours</p></div><div class="status ${status.replace(' ','-').toLowerCase()}">${status}</div>${score?`<strong>Score: ${score}</strong>`:''}<button class="primary" onclick="startDay(${d})">${a?.status==='completed'?'Retake':a?'Continue':'Start Exam'}</button></div>`}).join('')}
+async function startDay(d){day=d;qs=DAYS[d];i=0;submitted=false;const a=await api('/api/attempt/'+d);A=a?.answers||{};M=a?.reviewed||{};sec=a?.timer??9600;if(a?.status==='completed'&&a.result){submitted=true;showResult(a.result);return}$('dashboard').classList.add('hide');$('exam').classList.remove('hide');$('examDay').textContent=`Day ${day} • 160 Questions`;draw()}
+function draw(){const q=qs[i];$('qnum').textContent='Q'+(i+1);$('topic').textContent=q.topic||'Biology';$('diff').textContent=q.difficulty||'';$('progress').textContent=`Answered ${Object.keys(A).length}/160`;$('q').textContent=q.question;$('te').textContent=q.telugu||'';$('opts').innerHTML=q.options.map((x,n)=>`<div class="opt ${A[q.id]===n?'sel':''}" onclick="pick(${n})"><span>${'ABCD'[n]}</span>${x}</div>`).join('');$('mark').textContent=M[q.id]?'★ Review':'☆ Review';$('prev').disabled=i===0;$('next').textContent=i===159?'Finish':'Next';$('pal').innerHTML=qs.map((x,n)=>`<button class="p ${A[x.id]!==undefined?'a':''} ${M[x.id]?'m':''} ${n===i?'c':''}" onclick="go(${n})">${n+1}</button>`).join('');renderTimer()}
+function renderTimer(){let h=Math.floor(sec/3600),m=Math.floor(sec%3600/60),s=sec%60;$('timer').textContent=[h,m,s].map(x=>String(x).padStart(2,'0')).join(':')}
+async function sync(status){try{await api('/api/attempt/'+day,{method:'POST',body:JSON.stringify({answers:A,reviewed:M,timer:sec,status})})}catch(e){console.warn(e)}}
+function pick(n){A[qs[i].id]=n;sync('in-progress');draw()} function go(n){i=n;draw()}
+$('prev').onclick=()=>{if(i){i--;draw()}};$('next').onclick=()=>{if(i<159){i++;draw()}else submit()};$('clear').onclick=()=>{delete A[qs[i].id];sync('in-progress');draw()};$('mark').onclick=()=>{M[qs[i].id]=!M[qs[i].id];sync('in-progress');draw()};$('submit').onclick=submit;$('backDash').onclick=()=>{sync('in-progress');showPortal()};$('resultDash').onclick=()=>showPortal();
+async function submit(){if(!confirm(`Submit Day ${day} exam?`))return;let c=0,w=0,a=0;qs.forEach(q=>{if(A[q.id]!==undefined){a++;A[q.id]===q.correctAnswer?c++:w++}});const result={score:c,correct:c,wrong:w,unattempted:160-a,percentage:Number((c/160*100).toFixed(1))};submitted=true;await sync('completed');await api('/api/attempt/'+day,{method:'POST',body:JSON.stringify({answers:A,reviewed:M,timer:sec,status:'completed',result})});showResult(result)}
+function showResult(r){$('resultTitle').textContent=`Day ${day} Result`;$('score').textContent=`${r.score} / 160`;$('summary').textContent=`Correct: ${r.correct} • Wrong: ${r.wrong} • Unattempted: ${r.unattempted} • Percentage: ${r.percentage}%`;$('explanations').innerHTML='';$('modal').classList.remove('hide')}
+$('showExp').onclick=()=>{$('explanations').innerHTML=qs.map((q,n)=>`<div class="expCard"><b>Q${n+1}. ${q.question}</b><p class="expTe">${q.telugu||''}</p><div><strong>Correct Answer:</strong> ${q.options[q.correctAnswer]}</div><p><strong>Explanation:</strong> ${q.explanation||''}</p><p class="expTe"><strong>వివరణ:</strong> ${q.explanationTelugu||''}</p></div>`).join('')};
+$('restart').onclick=async()=>{if(confirm(`Clear all Day ${day} responses?`)){A={};M={};sec=9600;submitted=false;await sync('in-progress');$('modal').classList.add('hide');draw()}};
+setInterval(()=>{if(!$('exam').classList.contains('hide')&&!submitted&&sec>0){sec--;if(sec%5===0)sync('in-progress');renderTimer()}else if(sec===0&&!submitted)submit()},1000);
+(async()=>{if(!token)return showAuth();try{const j=await api('/api/me');user=j.user;showPortal()}catch{sessionStorage.removeItem('dscToken');token='';showAuth()}})();
