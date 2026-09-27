@@ -106,7 +106,7 @@ const server=http.createServer(async(req,res)=>{
         return send(res,200,{ok:true});
       }
       if(req.method==='GET' && p==='/api/me'){ const d=getDB(); return send(res,200,{user,attempts:d.attempts.filter(x=>x.userId===user.id)}); }
-      const m=p.match(/^\/api\/attempt\/(\d+)$/); if(m){ const day=Number(m[1]); if(day<7||day>20)return send(res,400,{error:'Invalid day'}); const d=getDB();
+      const m=p.match(/^\/api\/attempt\/(\d+)$/); if(m){ const day=Number(m[1]); if(day<7||day>21)return send(res,400,{error:'Invalid day'}); const d=getDB();
         if(req.method==='GET'){ return send(res,200,d.attempts.find(x=>x.userId===user.id&&x.day===day)||null); }
         if(req.method==='POST'){ const b=await readBody(req); let a=d.attempts.find(x=>x.userId===user.id&&x.day===day); if(!a){a={id:crypto.randomUUID(),userId:user.id,day,answers:{},reviewed:{},timer:9600,status:'in-progress',updatedAt:null};d.attempts.push(a);} if(b.answers)a.answers=b.answers; if(b.reviewed)a.reviewed=b.reviewed; if(Number.isFinite(b.timer))a.timer=Math.max(0,Math.min(9600,Number(b.timer))); if(b.status)a.status=b.status; if(b.result)a.result=b.result; a.updatedAt=new Date().toISOString(); saveDB(d); return send(res,200,a); }
       }
